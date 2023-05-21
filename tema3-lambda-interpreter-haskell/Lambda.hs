@@ -24,7 +24,7 @@ generateName n = "x" ++ show n
 generateX :: [String] -> String
 -- Generate [x1, x2, x3, ...], remove the variables that exist in both this new list and
 -- the usedVars list and return the first element.
-generateX usedVars = head (filter (`notElem` usedVars) (map generateName [1..]))
+generateX usedVars = (filter (`notElem` usedVars) (map generateName [1..])) !! 0
 
 
 -- Function to rename a variable in an expression. Parameters: old name, new name, expression.
@@ -32,17 +32,16 @@ rename :: String -> String -> Expr -> Expr
 -- If the expression is a variable, check if the variable to rename is the variable
 -- in the expression and return a new variable with the new name.
 rename x y (Variable z) = 
-    if z == x then 
-        Variable y
-    else
-        Variable z
+    if z == x
+        then Variable y
+        else Variable z
 -- If the expression is a function. If the variable to replace is the same as the lambda's variable,
 -- return the initial function. Else, replace variable z recursively in the expression's body with a
 -- newly generated variable name.
-rename x y (Function z e)
-    | z == x = Function z e
-    | otherwise = Function newX (rename x y newExpr)
-        where 
+rename x y (Function z e) =
+    if z == x
+        then Function z e
+        else Function newX (rename x y newExpr) where
             usedVars = free_vars e
             newX = generateX usedVars
             newExpr = rename z newX e
@@ -58,23 +57,22 @@ reduce :: Expr -> String -> Expr -> Expr
 reduce (Variable x) y e =
     if x == y
         then e
-    else
-        Variable x
+        else Variable x
 
 reduce (Function x e1) y e2
     -- Check if the variable x matches the reduction variable y.
-  | x == y = Function x e1
+    | x == y = Function x e1
     -- Check if the variable x is free in expression e2. If not, apply
     -- the reduction to the body of the e1 expression.
-  | x `notElem` free_vars e2 = Function x (reduce e1 y e2)
+    | x `notElem` free_vars e2 = Function x (reduce e1 y e2)
     -- If x is free in expression e2, generate a new variable name, rename
     -- all occurrences of x in expression e1 then apply the reduction to the
     -- renamed expression.
-  | otherwise = Function newX (reduce newExpr y e2)
-        where
-            usedVars = free_vars e1 ++ free_vars e2
-            newX = generateX usedVars
-            newExpr = rename x newX e1
+    | otherwise = Function newX (reduce newExpr y e2) where
+        usedVars = free_vars e1 ++ free_vars e2
+        newX = generateX usedVars
+        newExpr = rename x newX e1
+    
             
 -- Recursively apply the reduction on both expressions.
 reduce (Application e1 e2) y e3 = Application (reduce e1 y e3) (reduce e2 y e3)
@@ -91,43 +89,56 @@ isValue _ = False
 stepN :: Expr -> Expr
 stepN (Application (Function x e1) e2) = reduce e1 x e2
 stepN (Application e1 e2) =
-    if isValue e1 then
-        Application e1 (stepN e2)
-    else
-        Application (stepN e1) e2
+    if isValue e1
+        then Application e1 (stepN e2)
+        else Application (stepN e1) e2
 
 stepN (Function x e) = Function x (stepN e)
 stepN e = e
 
 -- 1.4. perform Normal Evaluation
-{--
 reduceN :: Expr -> Expr
-reduceN expr =
-  let reduced = stepN expr
-  in if reduced == expr then expr else reduceN reduced
---}
-
-reduceN :: Expr -> Expr
-reduceN e
-    | stepN e == e = e
-    | otherwise = reduceN (stepN e)
-
+reduceN e =
+    if stepN e == e
+        then e
+        else reduceN (stepN e)
 
 
 reduceAllN :: Expr -> [Expr]
-reduceAllN e = if isValue e then [e] else e : reduceAllN (stepN e)
+reduceAllN e =
+    if isValue e
+        then [e]
+        else e : reduceAllN (stepN e)
 
 -- Applicative Evaluation
--- TODO 1.5. perform one step of Applicative Evaluation
+-- 1.5. perform one step of Applicative Evaluation
 stepA :: Expr -> Expr
-stepA = undefined
+stepA (Application (Function x e1) e2) =
+  if isValue e2
+    then reduce e1 x e2
+    else Application (Function x e1) (stepA e2)
 
--- TODO 1.6. perform Applicative Evaluation
+stepA (Application e1 e2) =
+  if isValue e1
+    then Application e1 (stepA e2)
+    else Application (stepA e1) e2
+
+stepA (Function x e) = Function x (stepA e)
+stepA e = e
+
+
+-- 1.6. perform Applicative Evaluation
 reduceA :: Expr -> Expr
-reduceA = undefined
+reduceA e = 
+    if stepA e == e
+        then e
+        else reduceA (stepA e)
 
 reduceAllA :: Expr -> [Expr]
-reduceAllA = undefined
+reduceAllA e =
+    if isValue e
+        then [e]
+        else e : reduceAllA (stepA e)
 
 -- TODO 3.1. make substitutions into a expression with Macros
 evalMacros :: [(String, Expr)] -> Expr -> Expr
