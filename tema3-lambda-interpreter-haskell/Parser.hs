@@ -107,8 +107,12 @@ parse_function = do
     charParser '.'
     whitespace
     e <- parse_expr'
+    let e' = case e of
+                Application rest (Macro m) -> Application (Function [v] rest) (Macro m)
+                _ -> Function [v] e
+    return e'
     --trace ("Parsed function: \\" ++ [v] ++ "." ++ show e) $ return (Function [v] e)
-    return (Function [v] e)
+    --return (Function [v] e)
 
 -- Parse an application of two expressions
 parse_application :: Parser Expr
@@ -121,7 +125,7 @@ parse_macro :: Parser Expr
 parse_macro = do
     charParser '$'
     macroName <- many (satisfy isLower)
-    -- trace ("Parsed macro: $" ++ macroName) $ return (Macro macroName)
+    --trace ("Parsed macro: $" ++ macroName) $ return (Macro macroName)
     return (Macro macroName)
 
 -- Parse an expression
