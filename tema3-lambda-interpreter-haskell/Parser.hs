@@ -135,7 +135,7 @@ parse_expr s = case parse parse_expr' s of
     _ -> Variable ""
 
 parse_expr' :: Parser Expr
-parse_expr' = parse_application <|> parse_atom <|> parse_macro
+parse_expr' = parse_application <|> parse_atom
 
 
 -- TODO 4.2. parse code
