@@ -140,9 +140,21 @@ reduceAllA e =
         then [e]
         else e : reduceAllA (stepA e)
 
--- TODO 3.1. make substitutions into a expression with Macros
+-- 3.1. make substitutions into a expression with Macros
 evalMacros :: [(String, Expr)] -> Expr -> Expr
-evalMacros = undefined
+evalMacros dict (Variable x) =
+    case lookup x dict of
+        Just e -> e
+        _ -> Variable x
+
+evalMacros dict (Function x e) = Function x (evalMacros dict e)
+evalMacros dict (Application e1 e2) = Application (evalMacros dict e1) (evalMacros dict e2)
+evalMacros dict (Macro m) =
+    case lookup m dict of
+        Just e -> evalMacros dict e
+        _ -> Macro m
+
+
 
 -- TODO 4.1. evaluate code sequence using given strategy
 evalCode :: (Expr -> Expr) -> [Code] -> [Expr]
