@@ -73,7 +73,7 @@ anyChar = Parser $ \s ->
 
 -- Parse an atom (variable, function, or parentheses)
 parse_atom :: Parser Expr
-parse_atom = parse_variable <|> parse_function <|> parse_parentheses
+parse_atom = parse_variable <|> parse_function <|> parse_macro <|> parse_parentheses
 
 -- Parse an expression enclosed in parentheses
 parse_parentheses :: Parser Expr
@@ -94,7 +94,6 @@ parse_expr_tail = many (whitespace *> parse_atom)
 parse_variable :: Parser Expr
 parse_variable = do
     c <- satisfy isLower
-    --trace ("Parsed variable: " ++ [c]) $ return (Variable [c])
     return (Variable [c])
     
 
@@ -116,9 +115,14 @@ parse_application :: Parser Expr
 parse_application = do
     e1 <- parse_atom
     es <- parse_expr_tail
-    --trace ("Parsed application: " ++ show (e1:es)) $ return $ foldl Application e1 es
     return $ foldl Application e1 es
 
+parse_macro :: Parser Expr
+parse_macro = do
+    charParser '$'
+    macroName <- many (satisfy isLower)
+    -- trace ("Parsed macro: $" ++ macroName) $ return (Macro macroName)
+    return (Macro macroName)
 
 -- Parse an expression
 parse_expr :: String -> Expr
@@ -127,7 +131,7 @@ parse_expr s = case parse parse_expr' s of
     _ -> Variable ""
 
 parse_expr' :: Parser Expr
-parse_expr' = parse_application <|> parse_atom
+parse_expr' = parse_application <|> parse_atom <|> parse_macro
 
 
 -- TODO 4.2. parse code
