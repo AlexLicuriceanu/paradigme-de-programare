@@ -75,27 +75,13 @@ anyChar = Parser $ \s ->
 parse_atom :: Parser Expr
 parse_atom = parse_variable <|> parse_function <|> parse_macro <|> parse_parentheses
 
-parse_test :: Parser Expr
-parse_test =
+parse_application' :: Parser Expr
+parse_application' =
     do
-        f1 <- parse_test1
+        f1 <- parse_function
         whitespace
-        f2 <- parse_test1
+        f2 <- parse_function
         return (Application f1 f2)
-
-parse_test1 :: Parser Expr
-parse_test1 = do
-    charParser '\\'
-    whitespace
-    v <- satisfy isLower
-    whitespace
-    charParser '.'
-    whitespace
-    e <- parse_atom
-    let e' = case e of
-                Application rest (Macro m) -> Application (Function [v] rest) (Macro m)
-                _ -> Function [v] e
-    return e'
 
 -- Parse an expression enclosed in parentheses
 parse_parentheses :: Parser Expr
@@ -126,13 +112,12 @@ parse_function = do
     whitespace
     charParser '.'
     whitespace
-    e <- parse_expr'
+    e <- parse_atom <|> parse_expr'
     let e' = case e of
                 Application rest (Macro m) -> Application (Function [v] rest) (Macro m)
                 _ -> Function [v] e
     return e'
-    --trace ("Parsed function: \\" ++ [v] ++ "." ++ show e) $ return e'
-    --return (Function [v] e)
+    --trace ("parsing function: \\" ++ [v] ++ "." ++ show e) $ return e'
 
 parse_expr_tail :: Parser [Expr]
 parse_expr_tail = do
@@ -153,7 +138,7 @@ parse_macro :: Parser Expr
 parse_macro = do
     charParser '$'
     macroName <- many (satisfy isLower)
-    --trace ("Parsed macro: $" ++ macroName) $ return (Macro macroName)
+    --trace ("parsing macro: $" ++ macroName) $ return (Macro macroName)
     return (Macro macroName)
 
 -- Parse an expression
@@ -163,7 +148,7 @@ parse_expr s = case parse parse_expr' s of
     _ -> Variable ""
 
 parse_expr' :: Parser Expr
-parse_expr' = parse_test <|> parse_application <|> parse_atom
+parse_expr' = parse_application' <|> parse_application <|> parse_atom
 
 
 -- TODO 4.2. parse code
