@@ -155,7 +155,18 @@ evalMacros dict (Macro m) =
         _ -> Macro m
 
 
-
 -- TODO 4.1. evaluate code sequence using given strategy
+updateMacro :: [(String, Expr)] -> String -> Expr -> [(String, Expr)]
+updateMacro dict key expr = (key, expr) : filter (\(k, _) -> k /= key) dict
+
 evalCode :: (Expr -> Expr) -> [Code] -> [Expr]
-evalCode = undefined
+evalCode strat lines = evalCode' strat lines []
+
+evalCode' :: (Expr -> Expr) -> [Code] -> [(String, Expr)] -> [Expr]
+evalCode' _ [] _ = []
+
+evalCode' strat ((Evaluate e) : lines) dict =
+    (strat (evalMacros dict e)) : evalCode' strat lines dict
+
+evalCode' strat ((Assign key e) : lines) dict =
+    evalCode' strat lines (updateMacro dict key e) --(evalMacros dict expr))

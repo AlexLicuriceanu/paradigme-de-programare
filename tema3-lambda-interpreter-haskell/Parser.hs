@@ -140,4 +140,25 @@ parse_expr' = parse_application <|> parse_atom
 
 -- TODO 4.2. parse code
 parse_code :: String -> Code
-parse_code = undefined
+parse_code s = case parse parse_code' s of
+    Just (code, "") -> code
+    _ -> Evaluate (Variable "")
+
+parse_code' :: Parser Code
+parse_code' = parse_assign <|> parse_evaluate
+
+parse_assign :: Parser Code
+parse_assign =
+    do
+        key <- many (satisfy isLower)
+        whitespace
+        charParser '='
+        whitespace
+        e <- parse_expr'
+        return (Assign key e)
+
+parse_evaluate :: Parser Code
+parse_evaluate =
+    do
+        e <- parse_expr'
+        return (Evaluate e)
