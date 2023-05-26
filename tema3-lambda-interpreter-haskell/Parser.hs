@@ -73,7 +73,29 @@ anyChar = Parser $ \s ->
 
 -- Parse an atom (variable, function, or parentheses)
 parse_atom :: Parser Expr
-parse_atom = parse_variable <|> parse_function <|> parse_macro <|> parse_parentheses
+parse_atom = parse_test <|> parse_variable <|> parse_function <|> parse_macro <|> parse_parentheses
+
+parse_test :: Parser Expr
+parse_test =
+    do
+        f1 <- parse_test1
+        whitespace
+        f2 <- parse_test1
+        return (Application f1 f2)
+
+parse_test1 :: Parser Expr
+parse_test1 = do
+    charParser '\\'
+    whitespace
+    v <- satisfy isLower
+    whitespace
+    charParser '.'
+    whitespace
+    e <- parse_atom
+    let e' = case e of
+                Application rest (Macro m) -> Application (Function [v] rest) (Macro m)
+                _ -> Function [v] e
+    return e'
 
 -- Parse an expression enclosed in parentheses
 parse_parentheses :: Parser Expr
@@ -85,8 +107,6 @@ parse_parentheses = do
     charParser ')'
     return e
 
-parse_expr_tail :: Parser [Expr]
-parse_expr_tail = many (whitespace *> parse_atom)
 
 
 
@@ -111,8 +131,13 @@ parse_function = do
                 Application rest (Macro m) -> Application (Function [v] rest) (Macro m)
                 _ -> Function [v] e
     return e'
-    --trace ("Parsed function: \\" ++ [v] ++ "." ++ show e) $ return (Function [v] e)
+    --trace ("Parsed function: \\" ++ [v] ++ "." ++ show e) $ return e'
     --return (Function [v] e)
+
+parse_expr_tail :: Parser [Expr]
+parse_expr_tail = do
+  es <- some (whitespace *> parse_atom)
+  return es
 
 -- Parse an application of two expressions
 parse_application :: Parser Expr
@@ -120,6 +145,9 @@ parse_application = do
     e1 <- parse_atom
     es <- parse_expr_tail
     return $ foldl Application e1 es
+
+
+
 
 parse_macro :: Parser Expr
 parse_macro = do
