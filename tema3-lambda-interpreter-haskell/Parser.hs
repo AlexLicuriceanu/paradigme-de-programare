@@ -73,7 +73,7 @@ anyChar = Parser $ \s ->
 
 -- Parse an atom (variable, function, or parentheses)
 parse_atom :: Parser Expr
-parse_atom = parse_test <|> parse_variable <|> parse_function <|> parse_macro <|> parse_parentheses
+parse_atom = parse_variable <|> parse_function <|> parse_macro <|> parse_parentheses
 
 parse_test :: Parser Expr
 parse_test =
@@ -163,7 +163,7 @@ parse_expr s = case parse parse_expr' s of
     _ -> Variable ""
 
 parse_expr' :: Parser Expr
-parse_expr' = parse_application <|> parse_atom
+parse_expr' = parse_test <|> parse_application <|> parse_atom
 
 
 -- TODO 4.2. parse code
